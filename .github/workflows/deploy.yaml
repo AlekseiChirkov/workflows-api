@@ -18,8 +18,26 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker auth
+        run: gcloud auth configure-docker --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/workflow-api:latest .
+      
+      - name: Push Docker image
+        run: |
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/workflow-api:latest
 
       - name: Start Cloud SQL Proxy
         run: |
@@ -38,3 +56,13 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: alembic upgrade head
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy workflow-api \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/workflow-api:latest \
+            --region ${{ secrets.GCP_REGION }} \
+            --platform managed \
+            --service-account cloud-run-api-sa@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+            --allow-unauthenticated \
+            --add-cloudsql-instances ${{ secrets.INSTANCE_CONNECTION_NAME }}
