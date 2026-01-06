@@ -9,6 +9,7 @@ on:
       - "!src/worker/**"
       - "docker/api.Dockerfile"
       - "requirements.txt"
+
   workflow_dispatch:
 
 jobs:

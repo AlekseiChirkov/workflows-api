@@ -8,6 +8,7 @@ on:
       - "src/worker/**"
       - "docker/worker.Dockerfile"
       - "requirements.txt"
+
   workflow_dispatch:
 
 jobs:
