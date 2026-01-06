@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - "src/worker_app/**"
+      - "src/worker/**"
       - "docker/worker.Dockerfile"
       - "requirements.txt"
 

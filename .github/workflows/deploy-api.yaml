@@ -4,13 +4,18 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "src/**"
+      - "!src/worker/**"
+      - "docker/api.Dockerfile"
+      - "requirements.txt"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout ode
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -36,11 +41,13 @@ jobs:
       - name: Configure Docker auth
         run: gcloud auth configure-docker --quiet
 
-      - name: Build Docker image
+      - name: Build Docker image (API)
         run: |
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/workflow-api:latest .
-      
-      - name: Push Docker image
+          docker build \
+            -f docker/api.Dockerfile \
+            -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/workflow-api:latest .
+
+      - name: Push Docker image (API)
         run: |
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/workflow-api:latest
 
@@ -50,7 +57,7 @@ jobs:
           chmod +x cloud-sql-proxy
           echo '${{ secrets.GCP_SA_KEY }}' > sa-key.json
           ./cloud-sql-proxy ${{ secrets.INSTANCE_CONNECTION_NAME }} \
-          --credentials-file=sa-key.json &
+            --credentials-file=sa-key.json &
 
       - name: Run migrations
         env:
@@ -62,7 +69,7 @@ jobs:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: alembic upgrade head
 
-      - name: Deploy to Cloud Run
+      - name: Deploy to Cloud Run (API)
         run: |
           gcloud run deploy workflow-api \
             --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/workflow-api:latest \
