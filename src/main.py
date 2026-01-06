@@ -1,9 +1,11 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.openapi.utils import get_openapi
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from src.api.routers.workflows import router as workflows_router
+from src.api.routers.triggers import router as trigger_router
 from src.core.logger import get_logger
 from src.core.exceptions import AppException, app_exception_handler
 from src.core.middleware import (
@@ -13,8 +15,25 @@ from src.core.middleware import (
     RateLimitMiddleware
 )
 from src.core.request_context import get_request_id
+from src.core.config import settings
+from src.infrastructure.messaging.producer import PubSubProducer
 
 logger = get_logger()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    producer = PubSubProducer(
+        project_id=settings.GCP_PROJECT_ID,
+        topic_name=settings.PUBSUB_TOPIC_WORKFLOW_EVENTS,
+    )
+
+    app.state.event_producer = producer
+
+    try:
+        yield
+    finally:
+        producer.close()
 
 
 def create_app() -> FastAPI:
@@ -51,6 +70,7 @@ def create_app() -> FastAPI:
         - Run workflows (coming soon)
         """,
         openapi_tags=tags_metadata,
+        lifespan=lifespan,
     )
 
     app.add_middleware(
@@ -65,6 +85,7 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestIDMiddleware)
 
     app.include_router(workflows_router)
+    app.include_router(trigger_router)
     app.add_exception_handler(AppException, app_exception_handler)
 
     return app
@@ -78,7 +99,6 @@ def custom_openapi():
         return app.openapi_schema
 
     openapi_schema = get_openapi(
-
         title=app.title,
         version=app.version,
         description=app.description,

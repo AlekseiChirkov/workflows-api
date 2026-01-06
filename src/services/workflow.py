@@ -22,15 +22,19 @@ class WorkflowService:
         return await self.workflow_repo.get_all()
 
     async def update_workflow(self, workflow_id: UUID, payload: Dict) -> Workflow:
-        workflow = await self.workflow_repo.get_by_id(workflow_id)
-        return await self.workflow_repo.update(workflow, payload)
+        async with self.session.begin():
+            workflow = await self.workflow_repo.get_by_id(workflow_id)
+            updated_workflow = await self.workflow_repo.update(workflow, payload)
+        return updated_workflow
 
     async def delete_workflow(self, workflow_id: UUID) -> None:
         workflow = await self.workflow_repo.get_by_id(workflow_id)
         await self.workflow_repo.delete(workflow)
 
     async def create_workflow(self, payload: Dict) -> Workflow:
-        return await self.workflow_repo.create(payload)
+        async with self.session.begin():
+            workflow = await self.workflow_repo.create(payload)
+        return workflow
 
     async def create_task(self, workflow_id: UUID, payload: Dict) -> Task:
         async with self.session.begin():

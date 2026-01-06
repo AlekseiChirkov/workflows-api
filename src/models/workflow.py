@@ -7,57 +7,39 @@ from src.models.task import TaskRead
 from src.models.trigger import TriggerRead
 
 
-class BaseWorkflow(BaseModel):
+class WorkflowCreate(BaseModel):
     name: str
-    description: str
-    is_active: bool
-    status: str
-    created_at: datetime
-    updated_at: datetime
+    description: str | None = None
+    is_active: bool = True
 
-
-class WorkflowCreate(BaseWorkflow):
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
-                "name": "New Customer Onboarding"
+                "name": "New Customer Onboarding",
+                "description": "Onboarding flow",
+                "is_active": True
             }
         }
     )
+
 
 
 class WorkflowUpdate(BaseModel):
     name: str | None = None
+    is_active: bool | None = None
     status: str | None = None
 
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "name": "New Customer Onboarding",
-                "status": "draft"
-            }
-        }
-    )
 
-
-class WorkflowRead(BaseWorkflow):
+class WorkflowRead(BaseModel):
     id: UUID
-    tasks: List[TaskRead] = []
-    triggers: List[TriggerRead] = []
+    name: str
+    description: str | None
+    is_active: bool
+    status: str
+    created_at: datetime
+    updated_at: datetime | None
 
-    model_config = ConfigDict(
-        from_attributes=True,
-        json_schema_extra={
-            "example": {
-                "id": "123e4567-e89b-12d3-a456-426614174000",
-                "name": "New Customer Onboarding",
-                "status": "draft",
-                "tasks": [],
-                "triggers": []
-            }
-        }
-    )
+    tasks: list[TaskRead] = []
+    triggers: list[TriggerRead] = []
 
-
-class WorkflowInternal(WorkflowRead):
-    pass
+    model_config = ConfigDict(from_attributes=True)
