@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from src.core.config import settings
 from src.db.base import Base
-from src.db.models import workflow, task, trigger
+from src.db.models import workflow, task, trigger, execution_log
 
 # Alembic config
 config = context.config

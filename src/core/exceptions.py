@@ -4,20 +4,24 @@ from fastapi.responses import JSONResponse
 from src.core.request_context import get_request_id
 
 
-class AppException(Exception):
+class WorkflowResolutionError(Exception):
     """Base class for app-level exceptions."""
     pass
 
 
-class WorkflowNotFound(AppException):
+class WorkflowNotFound(WorkflowResolutionError):
     pass
 
 
-class WorkflowAlreadyExists(AppException):
+class WorkflowAlreadyExists(WorkflowResolutionError):
     pass
 
 
-def app_exception_handler(request: Request, exc: AppException):
+class WorkflowInactive(WorkflowResolutionError):
+    pass
+
+
+def app_exception_handler(request: Request, exc: WorkflowResolutionError):
     return JSONResponse(
         status_code=400,
         content={

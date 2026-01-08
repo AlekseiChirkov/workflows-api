@@ -214,10 +214,13 @@ nexus-health-387607-ce6969db665b.json
 .idea
 .idea/*
 .vscode/
+.windsurf/
+.windsurf/*
 
 # Python
 *.pyc
 .venv/
+test.py
 
 # OS
 .DS_Store

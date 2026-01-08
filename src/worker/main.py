@@ -1,3 +1,7 @@
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
 from fastapi import FastAPI
 
 from src.worker.routers.pubsub import router as pubsub_router
