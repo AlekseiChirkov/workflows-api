@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, Text, Boolean, DateTime, Numeric, ForeignKey, JSON
+from sqlalchemy import String, Text, Boolean, DateTime, Numeric, ForeignKey, JSON, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -9,6 +9,10 @@ from src.db.base import Base
 
 class ExecutionLog(Base):
     __tablename__ = "execution_logs"
+    __table_args__ = (
+        UniqueConstraint("event_id", "workflow_id", name="uq_execution_logs_event_workflow"),
+        Index("ix_execution_logs_workflow_created", "workflow_id", "created_at"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     workflow_id: Mapped[uuid.UUID] = mapped_column(

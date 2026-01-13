@@ -33,16 +33,16 @@ async def pubsub_push(body: PubSubPushBody, session: AsyncSession = Depends(get_
     logger.info("Received PubSub Push message", extra={})
     try:
         event = decode_pubsub_message(body)
+        resolver = WorkflowResolver(session)
+        workflow = await resolver.resolve(event)
         logger.info(
             "Worker handling event",
             extra={
                 "trace_id": event.trace_id,
                 "event_id": str(event.event_id),
-                "workflow_id": str(event.workflow.id)
+                "workflow_id": str(workflow.id)
             }
         )
-        resolver = WorkflowResolver(session)
-        workflow = await resolver.resolve(event)
         executor = Executor(session, ExecutionLogRepository(session))
         context = ExecutionContext(
             event=event,

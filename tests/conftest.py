@@ -15,9 +15,10 @@ pytest_plugins = [
 ]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def event_loop():
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     yield loop
     loop.close()
 
@@ -35,8 +36,27 @@ async def client():
 
 @pytest_asyncio.fixture
 async def async_session():
-    async for session in get_session():
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+    from src.core.config import settings
+    
+    DATABASE_URL = (
+        "postgresql+asyncpg://"
+        f"{settings.DB_USER}:{settings.DB_PASSWORD}@"
+        f"{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+    )
+    
+    engine = create_async_engine(DATABASE_URL, echo=False, poolclass=None)
+    async_session_factory = async_sessionmaker(
+        engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    
+    async with async_session_factory() as session:
         yield session
+        await session.rollback()
+    
+    await engine.dispose()
 
 
 @pytest.fixture
