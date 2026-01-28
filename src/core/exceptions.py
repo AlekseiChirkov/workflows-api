@@ -21,6 +21,19 @@ class WorkflowInactive(WorkflowResolutionError):
     pass
 
 
+class WorkerError(Exception):
+    """Base worker error class"""
+    retryable: bool = False
+
+
+class WorkerRetryError(WorkerError):
+    retryable = True
+
+
+class WorkerFatalError(WorkerError):
+    retryable = False
+
+
 def app_exception_handler(request: Request, exc: WorkflowResolutionError):
     return JSONResponse(
         status_code=400,

@@ -16,9 +16,11 @@ async def payload(active_workflow):
     return {
         "workflow_id": active_workflow.id,
         "event_id": uuid4(),
+        "trace_id": "test-trace",
         "action": "Dummy",
         "status": "pending",
         "retryable": False,
+        "payload_snapshot": {"foo": "bar"},
     }
 
 

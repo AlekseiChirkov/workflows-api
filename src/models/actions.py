@@ -12,6 +12,7 @@ class ActionResult(BaseModel):
     error: str | None = None
     retryable: bool = False
     duration: float | None = None
+    queued_to_dlq: bool = False
 
 
 class ExecutionContext(BaseModel):

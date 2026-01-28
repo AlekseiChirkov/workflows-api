@@ -5,11 +5,19 @@ logger = logging.getLogger(__name__)
 from uuid import uuid4
 
 from fastapi import APIRouter, Response, status, Depends
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import OperationalError
 
 from src.actions.log import LogAction
 from src.db.session import get_session
-from src.core.exceptions import WorkflowResolutionError
+from src.core.exceptions import (
+    WorkflowResolutionError,
+    WorkflowNotFound,
+    WorkflowInactive,
+    WorkerRetryError,
+    WorkerFatalError
+)
 from src.models.actions import ExecutionContext
 from src.repositories.execution_log import ExecutionLogRepository
 from src.worker.services.executor import Executor
@@ -51,16 +59,36 @@ async def pubsub_push(body: PubSubPushBody, session: AsyncSession = Depends(get_
         )
         action = LogAction()
         result = await executor.execute(action, context)
+        if result.queued_to_dlq:
+            logger.warning(
+                "Message moved to DLQ",
+                extra={
+                    "trace_id": event.trace_id,
+                    "event_id": str(event.event_id),
+                    "workflow_id": str(workflow.id),
+                },
+            )
+            return Response(status_code=status.HTTP_200_OK)
+
         if result.retryable:
-            raise WorkflowResolutionError("Action failed with retryable error")
-    except WorkflowResolutionError:
+            raise WorkerRetryError("Action failed with retryable error")
+    except (WorkflowNotFound, WorkflowInactive):
         logger.error("Workflow resolution error", exc_info=True)
         return Response(status_code=status.HTTP_200_OK)
-    except ValueError:
-        logger.error("Value error", exc_info=True)
+    except (ValidationError, ValueError):
+        logger.error("Payload validation error", exc_info=True)
+        return Response(status_code=status.HTTP_200_OK)
+    except OperationalError:
+        logger.error("Database error", exc_info=True)
+        return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except WorkerRetryError:
+        logger.error("Retryable error", exc_info=True)
+        return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except WorkerFatalError:
+        logger.error("Fatal error", exc_info=True)
         return Response(status_code=status.HTTP_200_OK)
     except Exception:
-        logger.error("Unexpected error", exc_info=True)
+        logger.exception("Unexpected error")
         return Response(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     logger.info(
